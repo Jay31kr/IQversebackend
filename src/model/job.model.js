@@ -31,10 +31,7 @@ const jobSchema = new Schema(
         trim: true
     },
 
-    experienceLevel: {
-        type: String,
-        enum: ["Internship", "Junior", "Mid", "Senior"]
-    },
+
 
     jobType: {
         type: String,
@@ -54,6 +51,11 @@ const jobSchema = new Schema(
             ref: "Candidate"
         }
     ],
+
+    resume : {
+        type:String,
+        trim : true
+    },
 
     deadline: {
         type: Date
