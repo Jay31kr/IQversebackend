@@ -1,10 +1,12 @@
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { Candidate } from "../model/candidate.model";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { Candidate } from "../model/candidate.model.js";
+import {Company} from "../model/company.model.js";
+import { signAccessToken } from "../utils/jwt.js";
 import mongoose from "mongoose";
 
-const registerCandidate = asyncHandler( async (req , res)=>{
+export const registerCandidate = asyncHandler( async (req , res)=>{
     
     const {userName , email , password} = req.body;
     if([userName ,  email , password].some((field)=> !field || field?.trim()==="")){
@@ -25,9 +27,7 @@ const registerCandidate = asyncHandler( async (req , res)=>{
 
     if(!createdUser) throw new ApiError(500 , "something went wrong while registering user!!");
 
- if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering the user")
-    }
+ 
 
     return res.status(201).json(
         new ApiResponse(201, createdUser, "User registered Successfully")
@@ -35,7 +35,7 @@ const registerCandidate = asyncHandler( async (req , res)=>{
 
 })
 
-const registerCompany = asyncHandler( async (req , res)=>{
+export const registerCompany = asyncHandler( async (req , res)=>{
     
     const {userName , email , password} = req.body;
     if([userName ,  email , password].some((field)=> !field || field?.trim()==="")){
@@ -66,7 +66,7 @@ const registerCompany = asyncHandler( async (req , res)=>{
 
 })
 
-const loginCandidate = asyncHandler(async (req , res)=>{
+export const loginCandidate = asyncHandler(async (req , res)=>{
 
     const {userName , email , password}=req.body;
 
@@ -77,13 +77,13 @@ const loginCandidate = asyncHandler(async (req , res)=>{
     const user = await Candidate.findOne({$or : [{userName} , {email}]})
     if(!user) throw new ApiError(404 , "User does not exist");
 
-    const isPasswordValid = user.isPasswordValid(password);
+    const isPasswordValid = await user.isPasswordValid(password);
     if(!isPasswordValid) throw new ApiError(401 , "Invalid user credentials");
 
-    const accessToken = user.generateAccessToken();
 
     const loggedInUser = await Candidate.findById(user._id).select("-password");
-      
+    const accessToken = signAccessToken({userId:loggedInUser._id.toString()})  
+
     const options = {
         httpOnly: true,
         secure: true
@@ -105,7 +105,7 @@ const loginCandidate = asyncHandler(async (req , res)=>{
 })
 
 
-const loginCompany = asyncHandler(async (req , res)=>{
+export const loginCompany = asyncHandler(async (req , res)=>{
 
     const {userName , email , password}=req.body;
 
@@ -116,12 +116,12 @@ const loginCompany = asyncHandler(async (req , res)=>{
     const user = await Company.findOne({$or : [{userName} , {email}]})
     if(!user) throw new ApiError(404 , "User does not exist");
 
-    const isPasswordValid = user.isPasswordValid(password);
+    const isPasswordValid = await user.isPasswordValid(password);
     if(!isPasswordValid) throw new ApiError(401 , "Invalid user credentials");
 
-    const accessToken = user.generateAccessToken();
-
+    
     const loggedInUser = await Company.findById(user._id).select("-password");
+    const accessToken = signAccessToken({userID:loggedInUser._id.toString()});
       
     const options = {
         httpOnly: true,
@@ -143,7 +143,7 @@ const loginCompany = asyncHandler(async (req , res)=>{
 
 })
 
-const logoutCandidate = asyncHandler(async (req, res) => {
+export const logoutCandidate = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
@@ -163,7 +163,7 @@ const logoutCandidate = asyncHandler(async (req, res) => {
 
 })
 
-const logOutCompany = asyncHandler(async (req , res)=>{
+export const logOutCompany = asyncHandler(async (req , res)=>{
     const options = {
         httpOnly:true,
         secure:true
@@ -182,4 +182,12 @@ const logOutCompany = asyncHandler(async (req , res)=>{
 
 })
 
-export {registerCandidate , registerCompany,loginCandidate ,loginCompany,logoutCandidate, logOutCompany};
+export const getCandidate = asyncHandler(async (req, res) => {
+  const user = await Candidate.findById(req.user.id).select("-password");
+  res.json({ success: true, data: { user } });
+});
+
+export const getCompany = asyncHandler(async (req, res) => {
+  const user = await Company.findById(req.user.id).select("-password");
+  res.json({ success: true, data: { user } });
+});
